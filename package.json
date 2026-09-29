@@ -1,0 +1,11 @@
+{
+  "name": "memestudio",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Meme Studio: search the Twetch Meme Library, caption templates on a canvas, and post finished memes on-chain through the bsvOS wallet.",
+  "license": "Open BSV License",
+  "scripts": {
+    "test": "node --test 'test/**/*.test.mjs'"
+  }
+}
