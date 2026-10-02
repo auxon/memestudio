@@ -1,63 +1,102 @@
-// Clef vision client (Workers AI). Jev-API compatible shape:
-// { state, questions } -> typed answers with probabilities.
-// Env: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN, CLEF_MODEL (default below).
-// Model id + request shape per https://developers.cloudflare.com/workers-ai/models/clef
-// TO-CONFIRM on first live call; harness runs --stub until then.
+// Clef vision client (Workers AI).
+// Shapes per https://developers.cloudflare.com/workers-ai/models/clef
+// (schema-input.json / schema-output.json, fetched 2026-10-02).
+// Env: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN,
+//       CLEF_VARIANT=clef|clef-flash (default flash: 38ms, cheapest).
 import { readFileSync } from "node:fs";
 
-const MODEL = process.env.CLEF_MODEL ?? "@cf/cloudflare/clef";
-const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID ?? "";
-const TOKEN = process.env.CLOUDFLARE_API_TOKEN ?? "";
+const VARIANT = () =>
+  (process.env.CLEF_VARIANT ?? "clef").trim() || "clef";
+// NOTE 2026-10-02: API rejects 'clef-flash' ("Use 'clef'"). Revisit flash
+// for the hot path once served.
+const ACCOUNT = () => process.env.CLOUDFLARE_ACCOUNT_ID ?? "";
+const TOKEN = () => process.env.CLOUDFLARE_API_TOKEN ?? "";
 
-export function imageToDataUrl(path) {
-  const buf = readFileSync(path);
-  const ext = path.endsWith(".png") ? "png" : "jpeg";
-  return `data:image/${ext};base64,${buf.toString("base64")}`;
-}
+const TEMPLATES = {
+  "roll-safe": "man tapping temple, smug obvious-advice",
+  drake: "two-panel preference: rejecting top, approving bottom",
+  "distracted-boyfriend": "man checking out another woman, labeled choice",
+  "two-buttons": "sweating choice between two red buttons",
+  "expanding-brain": "4-stage glowing brain escalation",
+  "change-my-mind": "man at table with sign, hot take",
+  "success-kid": "fist-pumping toddler on beach",
+  "woman-yelling-cat": "yelling woman vs unimpressed cat at dinner",
+  "gru-plan": "gru 4-panel scheming board",
+  stonks: "suit man before rising stock chart",
+  "batman-slap": "batman slapping robin mid-sentence",
+  "is-this-pigeon": "man gesturing at butterfly, mislabeling",
+  morpheus: "what if I told you matrix headshot",
+  oprah: "you get a car, everybody gets",
+  "futurama-fry": "squinting fry, not sure if",
+  boromir: "one does not simply walk into",
+  "keyboard-typing": "hands on keyboard closeup",
+  "computer-guy": "man pointing at monitor",
+  "trojan-horse": "wooden horse at gates",
+  euphoria: "that euphoria feeling reaction",
+  announcement: "text announcement, no meme template",
+  unknown: "none of the above",
+};
 
 /**
  * Classify one meme: template id + hook bucket + QA flags.
- * Returns { template:{option,confidence}, hook:{...}, qa:{...}, latencyMs, stub }
+ * Returns { template:{choice,confidence}, hook:{...}, qa:{score,confidence},
+ *           usage, latencyMs, stub }
  */
 export async function classifyMeme({ imagePath, caption, stub = false }) {
-  if (stub || !TOKEN || !ACCOUNT) {
+  const token = TOKEN(), account = ACCOUNT(), variant = VARIANT();
+  if (stub || !token || !account) {
     return { stub: true, template: null, hook: null, qa: null, latencyMs: 0 };
   }
   const started = Date.now();
+  const buf = readFileSync(imagePath);
+  if (buf.length > 4 * 1024 * 1024) {
+    throw new Error(`image over 4MiB Clef limit: ${imagePath}`);
+  }
   const body = {
-    state: { image: imageToDataUrl(imagePath), caption },
+    model: variant,
+    state: { caption },
+    images: [{ content_type: "image/jpeg", base64: buf.toString("base64") }],
     questions: {
       template: {
         type: "choice",
-        instructions: "Which meme template is this image?",
-        criteria: {
-          options: [
-            "roll-safe", "drake", "distracted-boyfriend", "two-buttons",
-            "expanding-brain", "change-my-mind", "success-kid",
-            "woman-yelling-cat", "gru-plan", "stonks", "batman-slap",
-            "is-this-pigeon", "morpheus", "oprah", "futurama-fry",
-            "boromir", "keyboard-typing", "computer-guy", "trojan-horse",
-            "euphoria", "announcement", "unknown",
-          ],
-        },
+        instructions: "Which meme template is this image? Answer unknown if none match.",
+        criteria: TEMPLATES,
       },
       hook: {
         type: "choice",
-        instructions: "Which engagement angle does the image+caption use?",
-        criteria: { options: ["money", "custody", "trust", "philosophy", "meta"] },
+        instructions: "Which engagement angle does the image plus caption use?",
+        criteria: {
+          money: "getting paid, fees, escrow, payouts, prices, earnings",
+          custody: "keys, seeds, wallets, self-custody, who holds what",
+          trust: "reputation, trust scores, verification, age vs credibility",
+          philosophy: "identity, purpose, vibes, manifestos with no money ask",
+          meta: "about the meme program itself, raw templates",
+        },
       },
       qa: {
         type: "score",
-        instructions: "Rate caption problems (higher = worse).",
-        criteria: { levels: ["clean", "minor", "blocked"] },
+        instructions: "Rate caption problems: overlap with faces, illegible contrast, blank frames.",
+        criteria: ["clean", "minor", "blocked"],
       },
     },
   };
   const r = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/ai/run/${MODEL}`,
-    { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify(body) },
+    `https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/@cf/cloudflare/clef`,
+    { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify(body) },
   );
-  if (!r.ok) throw new Error(`clef ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  if (!r.ok) throw new Error(`clef ${r.status}: ${(await r.text()).slice(0, 300)}`);
   const j = await r.json();
-  return { stub: false, ...(j.result ?? j), latencyMs: Date.now() - started };
+  const a = j.result?.answers ?? j.answers ?? {};
+  const pick = (ans) =>
+    ans && ans.choice !== undefined
+      ? { choice: ans.choice, confidence: ans.probabilities?.[ans.choice] ?? ans.confidence ?? null }
+      : null;
+  return {
+    stub: false,
+    template: pick(a.template),
+    hook: pick(a.hook),
+    qa: a.qa ? { score: a.qa.score, confidence: a.qa.confidence ?? null } : null,
+    usage: j.result?.usage ?? j.usage ?? null,
+    latencyMs: Date.now() - started,
+  };
 }

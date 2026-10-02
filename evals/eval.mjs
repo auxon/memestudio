@@ -41,6 +41,8 @@ let hookScored = 0;
 const lat = [];
 const pending = [];
 const missing = [];
+const confSum = { t: 0, h: 0, n: 0 };
+let inTok = 0, outTok = 0;
 
 for (const p of certain) {
   const img = p.file ? join(process.env.HOME, "Pictures", "bsvOS-memes", p.file) : null;
@@ -54,15 +56,22 @@ for (const p of certain) {
     continue;
   }
   lat.push(r.latencyMs);
-  const predT = r.template?.option ?? r.template;
+  const predT = r.template?.choice;
   if (predT) {
     scoredT++;
     if (predT === p.template) correctT++;
   }
-  const predH = r.hook?.option ?? r.hook;
+  const predH = r.hook?.choice;
   if (predH && cm[p.hook] && cm[p.hook][predH] !== undefined) {
     cm[p.hook][predH]++;
     hookScored++;
+  }
+  if (r.template?.confidence != null) confSum.t += r.template.confidence;
+  if (r.hook?.confidence != null) confSum.h += r.hook.confidence;
+  if (r.template?.confidence != null || r.hook?.confidence != null) confSum.n++;
+  if (r.usage) {
+    inTok += r.usage.input_tokens ?? 0;
+    outTok += r.usage.output_tokens ?? 0;
   }
 }
 
@@ -94,6 +103,8 @@ const results = {
   template: { accuracy: scoredT ? +(correctT / scoredT).toFixed(3) : null, correct: correctT, scored: scoredT },
   hook: { macro: hookPR, confusion: cm, scored: hookScored },
   latencyMs: lat.length ? { p50: lat.sort((a, b) => a - b)[Math.floor(lat.length / 2)], n: lat.length } : null,
+  confidence: confSum.n ? { template: +(confSum.t / confSum.n).toFixed(3), hook: +(confSum.h / confSum.n).toFixed(3), n: confSum.n } : null,
+  tokens: inTok + outTok ? { in: inTok, out: outTok } : null,
   engagementByHook: byHook,
   pending,
   missingFiles: missing,

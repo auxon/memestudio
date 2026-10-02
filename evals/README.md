@@ -9,10 +9,9 @@ vision decision model, scored against 32 labeled Twetch posts.
   caption, engagement (likes×3 + replies×2 + branches). `certain:true`
   rows (21) are safe eval material; batch-1 file↔post joins are
   `certain:false` except the 5 raw-template posts.
-- `clef.mjs` — Workers AI client (Jev-compatible `{state, questions}`
-  shape). Reads `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`,
-  `CLEF_MODEL` (default `@cf/cloudflare/clef` — confirm against
-  https://developers.cloudflare.com/workers-ai/models/clef).
+- `clef.mjs` — Workers AI client (exact schema-input/output shapes).
+  Reads `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`,
+  `CLEF_VARIANT` (`clef`|`clef-flash`, default flash).
 - `eval.mjs` — template top-1 accuracy, hook macro P/R + confusion,
   latency p50, engagement-by-hook briefing.
 
