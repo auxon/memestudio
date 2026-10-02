@@ -13,8 +13,18 @@ for (const f of [join(HERE, ".env"), join(process.env.HOME, ".config", "memestud
   if (!process.env.CLOUDFLARE_API_TOKEN && existsSync(f)) {
     for (const line of readFileSync(f, "utf8").split("\n")) {
       const m = line.match(/^\s*([A-Za-z_]+)=(.*)$/);
-      if (m) process.env[m[1]] ??= m[2].trim();
+      if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
     }
+  }
+}
+if (!process.argv.includes("--stub")) {
+  const t = process.env.CLOUDFLARE_API_TOKEN ?? "";
+  const a = process.env.CLOUDFLARE_ACCOUNT_ID ?? "";
+  console.error(
+    `creds: account=${a ? a.length + "ch" : "MISSING"} token=${t ? t.length + "ch" : "MISSING"} model=${process.env.CLEF_MODEL ?? "(default)"}`,
+  );
+  if (!t || !a) {
+    console.error("No live credentials — everything will stub-skip. Create evals/.env (see README).");
   }
 }
 const MEME_DIR = join(HERE, "..", "..", "Pictures", "bsvOS-memes");
