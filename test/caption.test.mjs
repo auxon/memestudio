@@ -82,3 +82,47 @@ test("manifest carries the localhost slot identity and a spend cap", () => {
   assert.equal(raw.start_url, "https://localhost:2121/memestudio/");
   assert.equal(raw.metanet.groupPermissions.spendingAuthorization.amount, 1_000_000);
 });
+
+test("layoutFields positions each field by ax/ay fractions", async () => {
+  const { layoutFields, hitField } = await import("../caption.js");
+  const L = layoutFields(
+    [
+      { id: "top", text: "HELLO", ax: 0.5, ay: 0.05 },
+      { id: "mid", text: "WORLD", ax: 0.2, ay: 0.5 },
+    ],
+    { width: 400, height: 200, measure: stubMeasure },
+  );
+  assert.equal(L.length, 2);
+  assert.equal(L[0].cx, 200);
+  assert.ok(L[0].firstBaselineY < 40);
+  assert.equal(L[1].cx, 80);
+  assert.equal(L[1].firstBaselineY, 100);
+  assert.ok(L[0].box.x0 < 200 && L[0].box.x1 > 200);
+});
+
+test("hitField picks the topmost field under the point", async () => {
+  const { layoutFields, hitField } = await import("../caption.js");
+  const L = layoutFields(
+    [
+      { id: "a", text: "AAA", ax: 0.5, ay: 0.1 },
+      { id: "b", text: "BBB", ax: 0.5, ay: 0.12 },
+    ],
+    { width: 400, height: 400, measure: stubMeasure },
+  );
+  assert.equal(hitField(L, 200, 45), "b");
+  assert.equal(hitField(L, 5, 5), null);
+});
+
+test("layoutFields clamps wild anchors and skips blank text", async () => {
+  const { layoutFields } = await import("../caption.js");
+  const L = layoutFields(
+    [
+      { id: "wild", text: "X", ax: 9, ay: -3 },
+      { id: "blank", text: "   ", ax: 0.5, ay: 0.5 },
+    ],
+    { width: 400, height: 400, measure: stubMeasure },
+  );
+  assert.equal(L[0].cx, 400);
+  assert.equal(L[0].firstBaselineY, 0);
+  assert.deepEqual(L[1].lines, []);
+});
