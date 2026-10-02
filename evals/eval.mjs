@@ -8,6 +8,15 @@ import { fileURLToPath } from "node:url";
 import { classifyMeme } from "./clef.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+// local secrets (never committed, see .gitignore): KEY=VALUE lines
+for (const f of [join(HERE, ".env"), join(process.env.HOME, ".config", "memestudio", "env")]) {
+  if (!process.env.CLOUDFLARE_API_TOKEN && existsSync(f)) {
+    for (const line of readFileSync(f, "utf8").split("\n")) {
+      const m = line.match(/^\s*([A-Za-z_]+)=(.*)$/);
+      if (m) process.env[m[1]] ??= m[2].trim();
+    }
+  }
+}
 const MEME_DIR = join(HERE, "..", "..", "Pictures", "bsvOS-memes");
 const stub = process.argv.includes("--stub");
 const outIdx = process.argv.indexOf("--out");

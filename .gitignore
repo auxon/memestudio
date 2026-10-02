@@ -1,3 +1,4 @@
-node_modules/
-*.log
 .DS_Store
+evals/.env
+*.log
+node_modules/
