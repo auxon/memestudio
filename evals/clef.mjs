@@ -4,6 +4,11 @@
 // Env: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN,
 //       CLEF_VARIANT=clef|clef-flash (default flash: 38ms, cheapest).
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
 
 const VARIANT = () =>
   (process.env.CLEF_VARIANT ?? "clef").trim() || "clef";
@@ -42,20 +47,33 @@ const TEMPLATES = {
  * Returns { template:{choice,confidence}, hook:{...}, qa:{score,confidence},
  *           usage, latencyMs, stub }
  */
-export async function classifyMeme({ imagePath, caption, stub = false }) {
+export async function classifyMeme({ imagePath, caption, stub = false, contentType = null }) {
   const token = TOKEN(), account = ACCOUNT(), variant = VARIANT();
   if (stub || !token || !account) {
     return { stub: true, template: null, hook: null, qa: null, latencyMs: 0 };
   }
   const started = Date.now();
-  const buf = readFileSync(imagePath);
+  const rawDisk = readFileSync(imagePath);
+  // Normalize via ImageMagick: media extensions lie (webp served as .jpg),
+  // GIFs reduce to first frame ([0]). 512px keeps template ID accurate
+  // while staying far inside the 65k token budget (empirically ~86k
+  // tokens/MP at 1024px — too dense). Cache key versions the recipe.
+  const normDir = join(tmpdir(), "clef-norm");
+  mkdirSync(normDir, { recursive: true });
+  const normKey = createHash("sha256").update(rawDisk).digest("hex").slice(0, 16) + "-512.jpg";
+  const normPath = join(normDir, normKey);
+  if (!existsSync(normPath)) {
+    execFileSync("magick", [imagePath + "[0]", "-resize", "512x512>", "-quality", 70, "jpg:" + normPath]);
+  }
+  const buf = readFileSync(normPath);
   if (buf.length > 4 * 1024 * 1024) {
     throw new Error(`image over 4MiB Clef limit: ${imagePath}`);
   }
+  const ct = "image/jpeg";
   const body = {
     model: variant,
     state: { caption },
-    images: [{ content_type: "image/jpeg", base64: buf.toString("base64") }],
+    images: [{ content_type: ct, base64: buf.toString("base64") }],
     questions: {
       template: {
         type: "choice",
