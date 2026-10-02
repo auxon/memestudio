@@ -42,12 +42,28 @@ const TEMPLATES = {
   unknown: "none of the above",
 };
 
+// Library-training families (wild cousins of the app taxonomy above).
+// Used by evals/library/classify.mjs via extraFamilies; the MemeStudio
+// app keeps the tight 22-family set for precision on blanks.
+export const LIBRARY_FAMILIES = {
+  pepe: "pepe the frog in any form, outfit, or emotion",
+  wojak: "wojak/doomer/coomer/soyjack/npc wojak figures",
+  bobo: "bobo the bear, ape-like brown bear character",
+  brainlet: "brainlet small-brain wojak variant, charts, neurons",
+  boomer: "boomer memes, older man characters",
+  toshi: "toshi cat, $toshi sticker memes",
+  apu: "apu apustaja, helper frog variant",
+  zoomer: "zoomer memes, young characters",
+  grug: "grug caveman character",
+  reaction: "generic reaction image not matching another family",
+};
+
 /**
  * Classify one meme: template id + hook bucket + QA flags.
  * Returns { template:{choice,confidence}, hook:{...}, qa:{score,confidence},
  *           usage, latencyMs, stub }
  */
-export async function classifyMeme({ imagePath, caption, stub = false, contentType = null }) {
+export async function classifyMeme({ imagePath, caption, stub = false, contentType = null, families = null }) {
   const token = TOKEN(), account = ACCOUNT(), variant = VARIANT();
   if (stub || !token || !account) {
     return { stub: true, template: null, hook: null, qa: null, latencyMs: 0 };
@@ -70,6 +86,7 @@ export async function classifyMeme({ imagePath, caption, stub = false, contentTy
     throw new Error(`image over 4MiB Clef limit: ${imagePath}`);
   }
   const ct = "image/jpeg";
+  const criteria = { ...TEMPLATES, ...(families ?? {}) };
   const body = {
     model: variant,
     state: { caption },
@@ -77,8 +94,8 @@ export async function classifyMeme({ imagePath, caption, stub = false, contentTy
     questions: {
       template: {
         type: "choice",
-        instructions: "Which meme template is this image? Answer unknown if none match.",
-        criteria: TEMPLATES,
+        instructions: "Which meme template or family is this image? Answer unknown if none match.",
+        criteria,
       },
       hook: {
         type: "choice",

@@ -23,6 +23,7 @@ const PRED = opt("--pred", "predictions.jsonl");
 const IN = opt("--in", "index.jsonl");
 const IMG = opt("--img", "library");
 const OUT = opt("--out", "finetune");
+const REQUIRE_IMAGE = opt("--require-image", "yes") !== "no";
 mkdirSync(OUT, { recursive: true });
 
 const meta = new Map();
@@ -68,6 +69,7 @@ if (existsSync(PRED)) {
       }
     }
     if (img) nImg++;
+    else if (REQUIRE_IMAGE) continue; // no pixels, no training row. Ever.
     const h = p.hook?.choice ?? "meta";
     hookDist[h] = (hookDist[h] ?? 0) + 1;
     out.push(JSON.stringify({

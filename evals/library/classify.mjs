@@ -5,7 +5,7 @@
 // Costs ~$0.005/16 images at current token rates; 10k images ≈ $3-4.
 import { readFileSync, appendFileSync, existsSync, readdirSync } from "node:fs";
 import { join, extname } from "node:path";
-import { classifyMeme } from "../clef.mjs";
+import { classifyMeme, LIBRARY_FAMILIES } from "../clef.mjs";
 import { fileFor, shardFor } from "./download.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync as _readEnv } from "node:fs";
@@ -102,6 +102,7 @@ async function worker() {
         imagePath: img,
         caption: it.title ?? "",
         contentType: ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg",
+        families: LIBRARY_FAMILIES,
       });
       appendFileSync(OUT, JSON.stringify({
         id: it.id,
