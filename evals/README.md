@@ -22,6 +22,16 @@ node eval.mjs --stub [--out results.json]   # plumbing check, no credentials
 node eval.mjs [--out results.json]          # live (needs env creds above)
 ```
 
+## Live wiring (MemeStudio app)
+
+The daemon exposes `classifyMeme` RPC (`packages/walletd/src/rpc.ts`,
+client `packages/walletd/src/clef.ts`, tests `clef.test.mjs`) backed by
+`CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_API_TOKEN` in the daemon
+environment. MemeStudio's editor has a **Vision check** button that
+calls it with the template URL + caption and shows template match,
+angle, and QA — advisory only, never blocks posting. Same questions
+and taxonomy as this harness, so eval results transfer directly.
+
 ## Known caveats
 
 - `trust` bucket has 1 sample — hook recall there is decorative until
