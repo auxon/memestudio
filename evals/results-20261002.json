@@ -1,0 +1,124 @@
+{
+  "stub": false,
+  "template": {
+    "accuracy": 1,
+    "correct": 16,
+    "scored": 16
+  },
+  "hook": {
+    "macro": {
+      "money": {
+        "precision": 1,
+        "recall": 0.9,
+        "support": 10
+      },
+      "custody": {
+        "precision": 1,
+        "recall": 1,
+        "support": 5
+      },
+      "trust": {
+        "precision": 1,
+        "recall": 1,
+        "support": 1
+      },
+      "philosophy": {
+        "precision": null,
+        "recall": null,
+        "support": 0
+      },
+      "meta": {
+        "precision": 0,
+        "recall": null,
+        "support": 0
+      }
+    },
+    "confusion": {
+      "money": {
+        "money": 9,
+        "custody": 0,
+        "trust": 0,
+        "philosophy": 0,
+        "meta": 1
+      },
+      "custody": {
+        "money": 0,
+        "custody": 5,
+        "trust": 0,
+        "philosophy": 0,
+        "meta": 0
+      },
+      "trust": {
+        "money": 0,
+        "custody": 0,
+        "trust": 1,
+        "philosophy": 0,
+        "meta": 0
+      },
+      "philosophy": {
+        "money": 0,
+        "custody": 0,
+        "trust": 0,
+        "philosophy": 0,
+        "meta": 0
+      },
+      "meta": {
+        "money": 0,
+        "custody": 0,
+        "trust": 0,
+        "philosophy": 0,
+        "meta": 0
+      }
+    },
+    "scored": 16
+  },
+  "latencyMs": {
+    "p50": 735,
+    "n": 16
+  },
+  "confidence": {
+    "template": 0.925,
+    "hook": 0.814,
+    "n": 16
+  },
+  "tokens": {
+    "in": 20854,
+    "out": 0
+  },
+  "engagementByHook": {
+    "money": {
+      "n": 14,
+      "total": 5,
+      "avg": 0.36
+    },
+    "philosophy": {
+      "n": 3,
+      "total": 0,
+      "avg": 0
+    },
+    "custody": {
+      "n": 9,
+      "total": 0,
+      "avg": 0
+    },
+    "meta": {
+      "n": 5,
+      "total": 0,
+      "avg": 0
+    },
+    "trust": {
+      "n": 1,
+      "total": 0,
+      "avg": 0
+    }
+  },
+  "pending": [],
+  "missingFiles": [
+    "04a3acbdf888",
+    "1e1421dbea26",
+    "72a4751a99c2",
+    "a145738cb59e",
+    "dca4101abfc2"
+  ],
+  "note": "live mode."
+}
