@@ -1,7 +1,10 @@
 .DS_Store
 evals/.env
+evals/library/families.json
 evals/library/finetune/
+evals/library/index.jsonl
 evals/library/library/
+evals/library/manifest-*.json
 evals/library/predictions*.jsonl
 *.log
 node_modules/
